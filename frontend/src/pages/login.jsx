@@ -1,4 +1,5 @@
-import { TramFront } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Train01Icon } from "@hugeicons/core-free-icons" 
 
 import { LoginForm } from "@/components/login-form"
 
@@ -9,7 +10,7 @@ export default function LoginPage() {
         <div className="flex justify-center gap-2 md:justify-start">
           <a href="#" className="flex items-center gap-2 font-medium">
             <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <TramFront className="size-4" />
+              <HugeiconsIcon icon={Train01Icon} strokeWidth={2} className="size-4"/>
             </div>
             RailSync
           </a>

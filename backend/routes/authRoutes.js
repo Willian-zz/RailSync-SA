@@ -76,6 +76,7 @@ router.post("/login", async (req, res) => {
             {
                 id: usuario.id,
                 email: usuario.email,
+                name: usuario.fullname,
                 cargo: usuario.cargo
             },
             JWT_SECRET,
@@ -146,6 +147,38 @@ router.get("/check", (req, res) => {
     } catch (error) {
         res.status(401).json({
             autenticado: false
+        });
+    }
+});
+
+router.get("/me", (req, res) => {
+    const token = req.cookies.token;
+
+    if (!token) {
+        return res.status(401).json({
+            message: "Não autenticado."
+        });
+    }
+
+    try {
+        const usuario = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
+
+        const userId = usuario.id;
+        const userName = usuario.name;
+        const userEmail = usuario.email;
+
+        res.json({
+            id: userId,
+            name: userName,
+            email: userEmail
+        })
+
+    } catch (error) {
+        res.status(401).json({
+            message: "Sessão inválida."
         });
     }
 });

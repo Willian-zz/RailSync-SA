@@ -90,7 +90,7 @@ export function LoginForm({
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Bem-vindo novamente</h1>
           <p className="text-sm text-balance text-muted-foreground">
-            Insera email e senha para conectar a sua conta
+            Insira email e senha para conectar a sua conta
           </p>
         </div>
         <Field>
