@@ -7,6 +7,9 @@ import { RotaPublica } from "./components/routes/rotaPublica";
 import { RotaProtegida } from "./components/routes/rotaProtegida";
 import { RotaInicial } from "./components/routes/rotaInicial";
 
+import DashboardLayout from "./components/dashboards/dashboard-layout";
+import TrensGerenciamento from "./components/dashboards/trens/trens-gerenciamento";
+
 function App() {
     return (
         <BrowserRouter>
@@ -20,7 +23,17 @@ function App() {
                 </Route>
 
                 <Route element={<RotaProtegida/>}>
-                    <Route path="/index" element={<Index />} />
+                    <Route path="/index" element={<Index />}>
+                        {/* Página inicial */}
+                        <Route index element={<DashboardLayout />} />
+
+                        {/* Páginas internas */}
+                        <Route path="trensGerenciamento" element={<TrensGerenciamento />} />
+
+                        {/* <Route path="relatorios" element={<Relatorios />} />
+
+                        <Route path="configuracoes" element={<Configuracoes />} /> */}
+                    </Route>
                 </Route>
 
             </Routes>

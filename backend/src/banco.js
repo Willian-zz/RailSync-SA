@@ -9,7 +9,22 @@ banco.exec(`
             email TEXT NOT NULL UNIQUE,
             senha_hash TEXT NOT NULL,
             cargo TEXT NOT NULL DEFAULT 'user'
-        )
+        );
+
+        CREATE TABLE IF NOT EXISTS trens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prefixo TEXT NOT NULL,
+            modelo TEXT NOT NULL,
+            ano INTEGER NOT NULL,
+            situacao TEXT NOT NULL DEFAULT 'ativo'
+        );
+
+        CREATE TABLE IF NOT EXISTS notificacoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mensagem TEXT NOT NULL,
+            trem INTEGER NOT NULL,
+            FOREIGN KEY (trem) REFERENCES trens(id)
+        );
     `);
 
 export default banco;
