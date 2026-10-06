@@ -361,3 +361,22 @@ code {
     font-size: 20px;
   }
 }
+
+/* =========================================================
+   TABLE 
+   ========================================================= */
+
+.etiqueta-ativo {
+  background: #eaf1e6;
+  color: #2f7d32;
+}
+
+.etiqueta-manutencao {
+  background: #fdf0eb;
+  color: #e84910;
+}
+
+.etiqueta-inativo {
+  background: #eceff4;
+  color: #6e7686;
+}

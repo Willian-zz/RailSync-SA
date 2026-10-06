@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import authRoutes from "../routes/authRoutes.js"
+import stmtRoutes from "../routes/stmtRoutes.js"
 import banco from "./banco.js";
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json()); //Para transmitir os dados sempre por json;
 app.use(cookieParser()); //Enviar cookies e salvar sessão
 
 app.use("/api/auth", authRoutes);
+app.use("/api/stmt", stmtRoutes);
 
 app.listen(3000, () => { //Ao rodar vai abrir o servidor na porta 3000
     console.log("Servidor rodando em http://localhost:3000");
