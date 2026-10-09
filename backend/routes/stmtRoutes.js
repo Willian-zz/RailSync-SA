@@ -25,6 +25,28 @@ router.get("/trains", async (req, res) => {
     }
 })
 
+router.get("/trains/status", async (req, res) => {
+    try {
+        const situacao = banco.prepare(`SELECT situacao, COUNT(*) AS quantidade FROM trens GROUP BY situacao`).all();
+
+        if(situacao.length <= 0) {
+            return res.json({
+                message: "Não há trens."
+            })
+        }
+
+        const resultado = Object.fromEntries(
+            situacao.map(item => [item.situacao, item.quantidade])
+        );
+
+        res.json(resultado);
+    } catch (error) {
+        res.status(401).json({
+            message: "Não foi possível fazer a pesquisa."
+        })
+    }
+})
+
 /* router.post("/trains/register", async (req, res) => {
     try {
         const {fullname, email, senha} = req.body;
