@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 
 import { MoreHorizontalIcon } from "lucide-react";
 
+import { useNavigate } from "react-router-dom";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,11 +45,9 @@ import {
 } from "recharts";
 
 export default function TrensGerenciamento() {
-  const [trens, setTrens] = useState([]);
+  const navigate = useNavigate();
 
-  async function teste() {
-    console.log("Olá"); //fazer futuramente para apagar trens
-  }
+  const [trens, setTrens] = useState([]);
 
   async function buscarTrens() {
     try {
@@ -87,7 +87,29 @@ export default function TrensGerenciamento() {
     }
   }
 
-    const [situacoes, setSituacoes] = useState({});
+  async function excluirTrem(id) {
+    const confirm = window.confirm("Tem certeza que deseja apagar o trem?");
+
+    if(!confirm) return;
+
+    try {
+      const resposta = await fetch(`http://localhost:3000/api/stmt/trains/${id}`, {
+        method: "DELETE"
+      });
+
+      if(!resposta.ok) {
+        throw new Error("Não foi possível excluir o trem.");
+      };
+
+      setTrens((trensAtuais) =>
+        trensAtuais.filter((trem) => trem.id !== id) //Remove o trem da tabela e atualiza ela após a exclusão
+      );
+    } catch (error) {
+      console.error("Erro ao conectar com o servidor: ", error);
+    }
+  }
+
+  const [situacoes, setSituacoes] = useState({});
 
   useEffect(() => {
     async function carregarDados() {
@@ -200,7 +222,7 @@ const dados = [
 
           <Separator orientation="vertical" />
 
-          <Button className="rounded-xl rounded-l-none">Novo trem</Button>
+          <Button className="rounded-xl rounded-l-none" onClick={() => navigate("/index/trens/novo")}>Novo trem</Button>
         </div>
 
         <div className="max-h-96 overflow-y-auto">
@@ -245,11 +267,11 @@ const dados = [
                         }
                       />
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/index/trens/editar/${trem.id}`)}>Editar</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           variant="destructive"
-                          onClick={() => teste()}
+                          onClick={() => excluirTrem(trem.id)}
                         >
                           Apagar
                         </DropdownMenuItem>

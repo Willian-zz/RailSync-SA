@@ -9,6 +9,7 @@ import { RotaInicial } from "./components/routes/rotaInicial";
 
 import DashboardLayout from "./components/dashboards/dashboard-layout";
 import TrensGerenciamento from "./components/dashboards/trens/trens-gerenciamento";
+import TrensFormulario from "./components/dashboards/trens/trens-formulario";
 
 function App() {
     return (
@@ -29,6 +30,10 @@ function App() {
 
                         {/* Páginas internas */}
                         <Route path="trensGerenciamento" element={<TrensGerenciamento />} />
+
+                        <Route path="trens/novo" element={<TrensFormulario />} />
+
+                        <Route path="trens/editar/:id" element={<TrensFormulario />} />
 
                         {/* <Route path="relatorios" element={<Relatorios />} />
 

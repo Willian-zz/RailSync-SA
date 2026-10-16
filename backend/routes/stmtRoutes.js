@@ -11,12 +11,6 @@ router.get("/trains", async (req, res) => {
     try {
         const trens = banco.prepare(`SELECT * FROM trens`).all();
 
-        if(trens.length <= 0) {
-            return res.json({
-                message: "Não há trens."
-            })
-        }
-
         res.json(trens);
     } catch (error) {
         res.status(401).json({
@@ -41,49 +35,144 @@ router.get("/trains/status", async (req, res) => {
 
         res.json(resultado);
     } catch (error) {
+        res.status(500).json({
+            message: "Não foi possível fazer a pesquisa."
+        })
+    }
+})
+
+router.get("/trains/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+
+        const trem = banco.prepare(`SELECT * FROM trens WHERE id = ?`).get(id);
+
+        if(!trem) {
+            return res.status(404).json({
+                message : "Trem não encontrado."
+            })
+        }
+
+        res.json(trem);
+    } catch (error) {
         res.status(401).json({
             message: "Não foi possível fazer a pesquisa."
         })
     }
 })
 
-/* router.post("/trains/register", async (req, res) => {
+router.post("/trains", async(req, res) => {
     try {
-        const {fullname, email, senha} = req.body;
+        const {prefixo, modelo, ano, situacao} = req.body;
 
-        if(!fullname || !email || !senha) {
+        if(!prefixo || !modelo || !ano || !situacao) {
             return res.status(400).json({
                 message: "Preencha todos os campos."
             });
         }
 
-        const usuarioExistente = banco.prepare("SELECT id FROM usuarios WHERE email = ?").get(email);
+        const tremExistente = banco.prepare("SELECT id FROM trens WHERE prefixo = ?").get(prefixo);
 
-        if(usuarioExistente) {
+        if(tremExistente) {
             return res.status(409).json({
-                message: "Este email já está cadastrado."
+                message: "Este trem já está cadastrado."
             });
         }
 
-        const senhaHash = await argon2.hash(senha);
-
         banco.prepare(`
-            INSERT INTO usuarios 
-            (fullname, email, senha_hash)
-            VALUES (?, ?, ?)
+            INSERT INTO trens
+            (prefixo, modelo, ano, situacao)
+            VALUES (?, ?, ?, ?)
             `)
-            .run(fullname, email, senhaHash);
+            .run(prefixo, modelo, ano, situacao);
 
         res.status(201).json({
-            message: "Usuário cadastrado com sucesso."
+            message: "Trem cadastrado com sucesso."
         });
     } catch(error) {
         console.error(error);
 
         res.status(500).json({
-            message: "Erro ao criar usuário."
+            message: "Erro ao criar o trem."
         });
     }
-}); */
+})
+
+router.put("/trains/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { prefixo, modelo, ano, situacao } = req.body;
+
+        if (!prefixo || !modelo || !ano || !situacao) {
+            return res.status(400).json({
+                message: "Preencha todos os campos."
+            });
+        }
+
+        // Verifica se o trem existe
+        const tremExistente = banco.prepare(
+            "SELECT id FROM trens WHERE id = ?"
+        ).get(id);
+
+        if (!tremExistente) {
+            return res.status(404).json({
+                message: "Trem não encontrado."
+            });
+        }
+
+        // Verifica se outro trem já utiliza prefixo
+        const prefixoExistente = banco.prepare(
+            "SELECT id FROM trens WHERE prefixo = ? AND id != ?"
+        ).get(prefixo, id);
+
+        if (prefixoExistente) {
+            return res.status(409).json({
+                message: "Este prefixo já está sendo utilizado por outro trem."
+            });
+        }
+
+        // Atualiza os dados do trem
+        banco.prepare(`
+            UPDATE trens
+            SET prefixo = ?, modelo = ?, ano = ?, situacao = ?
+            WHERE id = ?
+        `).run(prefixo, modelo, ano, situacao, id);
+
+        return res.status(200).json({
+            message: "Trem atualizado com sucesso."
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: "Erro ao atualizar o trem."
+        });
+    }
+});
+
+router.delete("/trains/:id", (req, res) => {
+    try {
+        const {id} = req.params;
+
+        const resultado = banco.prepare("DELETE FROM trens WHERE id = ?").run(id);
+
+        if(resultado.changes === 0){
+            return res.status(404).json({
+                message: "Trem não encontrado." 
+            });
+        }
+
+        res.json({
+            message: "Trem excluído com sucesso."
+        })
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            message: "Erro ao excluir o trem."
+        });
+    }
+});
 
 export default router;
