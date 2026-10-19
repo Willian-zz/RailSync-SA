@@ -7,6 +7,11 @@ const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
+
+//==========================
+//TRENS
+//==========================
+
 router.get("/trains", async (req, res) => {
     try {
         const trens = banco.prepare(`SELECT * FROM trens`).all();
@@ -171,6 +176,156 @@ router.delete("/trains/:id", (req, res) => {
 
         res.status(500).json({
             message: "Erro ao excluir o trem."
+        });
+    }
+});
+
+//==========================
+//SENSORES
+//==========================
+
+router.get("/sensors", async (req, res) => {
+    try {
+        const sensores = banco.prepare(`SELECT * FROM sensores`).all();
+
+        res.json(sensores);
+    } catch (error) {
+        res.status(401).json({
+            message: "Não foi possível fazer a pesquisa."
+        })
+    }
+})
+
+router.get("/sensors/:id", async (req, res) => {
+    try {
+        const {id} = req.params;
+
+        const sensor = banco.prepare(`SELECT * FROM sensores WHERE id = ?`).get(id);
+
+        if(!sensor) {
+            return res.status(404).json({
+                message : "Sensor não encontrado."
+            })
+        }
+
+        res.json(sensor);
+    } catch (error) {
+        res.status(401).json({
+            message: "Não foi possível fazer a pesquisa."
+        })
+    }
+})
+
+router.post("/sensors", async(req, res) => {
+    try {
+        const {codigo, tipo, unidade, trem_id} = req.body;
+
+        if(!codigo || !tipo || !unidade || !trem_id) {
+            return res.status(400).json({
+                message: "Preencha todos os campos."
+            });
+        }
+
+        const sensorExistente = banco.prepare("SELECT id FROM sensores WHERE codigo = ?").get(codigo);
+
+        if(sensorExistente) {
+            return res.status(409).json({
+                message: "Este sensor já está cadastrado."
+            });
+        }
+
+        banco.prepare(`
+            INSERT INTO sensores
+            (codigo, tipo, unidade, trem_id)
+            VALUES (?, ?, ?, ?)
+            `)
+            .run(codigo, tipo, unidade, trem_id);
+
+        res.status(201).json({
+            message: "Sensor cadastrado com sucesso."
+        });
+    } catch(error) {
+        console.error(error);
+
+        res.status(500).json({
+            message: "Erro ao criar o sensor."
+        });
+    }
+})
+
+router.put("/sensors/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { codigo, tipo, unidade, trem_id } = req.body;
+
+        if (!codigo || !tipo || !unidade || !trem_id) {
+            return res.status(400).json({
+                message: "Preencha todos os campos."
+            });
+        }
+
+        // Verifica se o sensor existe
+        const sensorExistente = banco.prepare(
+            "SELECT id FROM sensores WHERE id = ?"
+        ).get(id);
+
+        if (!sensorExistente) {
+            return res.status(404).json({
+                message: "Trem não encontrado."
+            });
+        }
+
+        // Verifica se outro sensor já utiliza codigo
+        const codigoExistente = banco.prepare(
+            "SELECT id FROM sensores WHERE codigo = ? AND id != ?"
+        ).get(codigo, id);
+
+        if (codigoExistente) {
+            return res.status(409).json({
+                message: "Este codigo já está sendo utilizado por outro sensor."
+            });
+        }
+
+        // Atualiza os dados do sensor
+        banco.prepare(`
+            UPDATE sensores
+            SET codigo = ?, tipo = ?, unidade = ?, trem_id = ?
+            WHERE id = ?
+        `).run(codigo, tipo, unidade, trem_id, id);
+
+        return res.status(200).json({
+            message: "Sensor atualizado com sucesso."
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: "Erro ao atualizar o sensor."
+        });
+    }
+});
+
+router.delete("/sensors/:id", (req, res) => {
+    try {
+        const {id} = req.params;
+
+        const resultado = banco.prepare("DELETE FROM sensores WHERE id = ?").run(id);
+
+        if(resultado.changes === 0){
+            return res.status(404).json({
+                message: "Sensor não encontrado." 
+            });
+        }
+
+        res.json({
+            message: "Sensor excluído com sucesso."
+        })
+    } catch (error) {
+        console.error(error);
+
+        res.status(500).json({
+            message: "Erro ao excluir o sensor."
         });
     }
 });

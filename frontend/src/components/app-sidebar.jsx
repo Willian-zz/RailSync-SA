@@ -114,7 +114,7 @@ export function AppSidebar({
           },
           {
             title: "Gerenciamento",
-            url: "#",
+            url: "/index/sensoresGerenciamento",
           },
         ],
       },

@@ -1,6 +1,8 @@
-import { Outlet, useNavigate } from "react-router-dom";
 
-import { AppSidebar } from "@/components/app-sidebar"
+import { Fragment } from "react";
+import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
+
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,30 +10,66 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-export default function index() {
+// Nomes que serão exibidos no breadcrumb
+const nomesRotas = {
+  index: "Início",
+  trensGerenciamento: "Gerenciamento de trens",
+  sensoresGerenciamento: "Gerenciamento de sensores",
+  trens: "Trens",
+  novo: "Novo",
+  editar: "Editar",
+};
+
+// Gera os itens do breadcrumb automaticamente a partir da URL
+function gerarBreadcrumb(pathname) {
+  const partes = pathname.split("/").filter(Boolean);
+
+  let caminhoAtual = "";
+
+  return partes
+    .filter((parte) => !/^\d+$/.test(parte))
+    .map((parte) => {
+      caminhoAtual += `/${parte}`;
+
+      return {
+        caminho: caminhoAtual,
+        nome: nomesRotas[parte] || parte,
+      };
+    });
+}
+
+export default function Index() {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const breadcrumbs = gerarBreadcrumb(location.pathname);
+
   async function logout() {
+    const confirmar = window.confirm(
+      "Tem certeza que deseja sair?"
+    );
 
-    const confirm = window.confirm("Tem certeza que deseja sair?");
-
-    if (!confirm) return;
+    if (!confirmar) return;
 
     try {
-      const resposta = await fetch("http://localhost:3000/api/auth/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
+      const resposta = await fetch(
+        "http://localhost:3000/api/auth/logout",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
+      );
 
       const dados = await resposta.json();
 
@@ -41,43 +79,64 @@ export default function index() {
       }
 
       console.log(dados.message);
-
       navigate("/login");
     } catch (error) {
-      console.error("Erro ao conectar com o servidor: ", error);
+      console.error(
+        "Erro ao conectar com o servidor:",
+        error
+      );
     }
   }
 
-return (
+  return (
     <SidebarProvider>
       <AppSidebar onLogout={logout} />
+
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
+
             <Separator
               orientation="vertical"
               className="mr-2 data-[orientation=vertical]:h-4"
             />
+
             <Breadcrumb>
               <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="#">
-                    Build Your Application
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Data Fetching</BreadcrumbPage>
-                </BreadcrumbItem>
+                {breadcrumbs.map((item, index) => {
+                  const ultimo =
+                    index === breadcrumbs.length - 1;
+
+                  return (
+                    <Fragment key={item.caminho}>
+                      {index > 0 && <BreadcrumbSeparator />}
+
+                      <BreadcrumbItem>
+                        {ultimo ? (
+                          <BreadcrumbPage>
+                            {item.nome}
+                          </BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink asChild>
+                            <Link to={item.caminho}>
+                              {item.nome}
+                            </Link>
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </Fragment>
+                  );
+                })}
               </BreadcrumbList>
             </Breadcrumb>
           </div>
         </header>
+
         <main className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <Outlet/>
+          <Outlet />
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

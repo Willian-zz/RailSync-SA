@@ -11,6 +11,9 @@ import DashboardLayout from "./components/dashboards/dashboard-layout";
 import TrensGerenciamento from "./components/dashboards/trens/trens-gerenciamento";
 import TrensFormulario from "./components/dashboards/trens/trens-formulario";
 
+import SensoresGerenciamento from "./components/dashboards/sensores/sensores-gerenciamento";
+import SensoresFormulario from "./components/dashboards/sensores/sensores-formulario";
+
 function App() {
     return (
         <BrowserRouter>
@@ -30,10 +33,13 @@ function App() {
 
                         {/* Páginas internas */}
                         <Route path="trensGerenciamento" element={<TrensGerenciamento />} />
+                        <Route path="trensGerenciamento/novo" element={<TrensFormulario />} />
+                        <Route path="trensGerenciamento/editar/:id" element={<TrensFormulario />} />
 
-                        <Route path="trens/novo" element={<TrensFormulario />} />
-
-                        <Route path="trens/editar/:id" element={<TrensFormulario />} />
+                        <Route path="sensoresGerenciamento" element={<SensoresGerenciamento />} />
+                        <Route path="sensoresGerenciamento/novo" element={<SensoresFormulario />} />
+                        <Route path="sensoresGerenciamento/editar/:id" element={<SensoresFormulario />} />
+                        
 
                         {/* <Route path="relatorios" element={<Relatorios />} />
 
