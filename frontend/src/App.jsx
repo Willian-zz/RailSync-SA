@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import Login from "./pages/login";
@@ -10,9 +11,12 @@ import { RotaInicial } from "./components/routes/rotaInicial";
 import DashboardLayout from "./components/dashboards/dashboard-layout";
 import TrensGerenciamento from "./components/dashboards/trens/trens-gerenciamento";
 import TrensFormulario from "./components/dashboards/trens/trens-formulario";
+import TrensLeituras from "./components/dashboards/trens/trens-leituras";
 
 import SensoresGerenciamento from "./components/dashboards/sensores/sensores-gerenciamento";
 import SensoresFormulario from "./components/dashboards/sensores/sensores-formulario";
+
+const TrensLeituraRelatorio = lazy(() => import("./components/dashboards/trens/trens-leitura-relatorio"));
 
 function App() {
     return (
@@ -32,6 +36,12 @@ function App() {
                         <Route index element={<DashboardLayout />} />
 
                         {/* Páginas internas */}
+                        <Route path="trensLeituras" element={<TrensLeituras />} />
+                        <Route path="trensLeituras/relatorio/:id" element={
+                            <Suspense fallback={<p role="status">Carregando relatório...</p>}>
+                                <TrensLeituraRelatorio />
+                            </Suspense>
+                        } />
                         <Route path="trensGerenciamento" element={<TrensGerenciamento />} />
                         <Route path="trensGerenciamento/novo" element={<TrensFormulario />} />
                         <Route path="trensGerenciamento/editar/:id" element={<TrensFormulario />} />

@@ -38,6 +38,16 @@ const tiposSensores = [
     label: "Velocidade → km/h",
   },
   {
+    tipo: "consumo",
+    unidade: "L/h",
+    label: "Consumo → L/h",
+  },
+  {
+    tipo: "vibracao",
+    unidade: "mm/s",
+    label: "Vibração → mm/s",
+  },
+  {
     tipo: "peso",
     unidade: "kg",
     label: "Peso → kg",
@@ -245,7 +255,7 @@ export default function SensoresFormulario() {
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <h1 className="mb-6 text-xl font-semibold">
         {editando ? "Editar sensor" : "Cadastrar sensor"}
       </h1>
@@ -253,7 +263,7 @@ export default function SensoresFormulario() {
       {carregando ? (
         <p>Carregando dados do sensor...</p>
       ) : (
-        <form className="w-full max-w-sm" onSubmit={salvarSensor}>
+        <form className="w-full min-w-0 max-w-sm" onSubmit={salvarSensor}>
           {erro && (
             <p className="mb-4 text-sm text-red-500" role="alert">
               {erro}
@@ -354,7 +364,7 @@ export default function SensoresFormulario() {
             </Field>
 
             {/* Botões */}
-            <Field orientation="horizontal">
+            <Field orientation="horizontal" className="flex-wrap">
               <Button
                 type="button"
                 variant="outline"

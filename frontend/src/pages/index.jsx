@@ -21,6 +21,8 @@ import {
 // Nomes que serão exibidos no breadcrumb
 const nomesRotas = {
   index: "Início",
+  trensLeituras: "Leituras de trens",
+  relatorio: "Relatório da leitura",
   trensGerenciamento: "Gerenciamento de trens",
   sensoresGerenciamento: "Gerenciamento de sensores",
   trens: "Trens",
@@ -93,8 +95,8 @@ export default function Index() {
       <AppSidebar onLogout={logout} />
 
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
+        <header className="flex min-h-16 shrink-0 items-center gap-2 py-3 transition-[width,height] ease-linear md:h-16 md:py-0 group-has-data-[collapsible=icon]/sidebar-wrapper:md:h-12 group-has-data-[collapsible=icon]/sidebar-wrapper:md:min-h-12">
+          <div className="flex min-w-0 items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
 
             <Separator
@@ -102,7 +104,7 @@ export default function Index() {
               className="mr-2 data-[orientation=vertical]:h-4"
             />
 
-            <Breadcrumb>
+            <Breadcrumb className="min-w-0 [overflow-wrap:anywhere]">
               <BreadcrumbList>
                 {breadcrumbs.map((item, index) => {
                   const ultimo =
@@ -112,16 +114,14 @@ export default function Index() {
                     <Fragment key={item.caminho}>
                       {index > 0 && <BreadcrumbSeparator />}
 
-                      <BreadcrumbItem>
+                      <BreadcrumbItem className="min-w-0 text-left">
                         {ultimo ? (
                           <BreadcrumbPage>
                             {item.nome}
                           </BreadcrumbPage>
                         ) : (
-                          <BreadcrumbLink asChild>
-                            <Link to={item.caminho}>
-                              {item.nome}
-                            </Link>
+                          <BreadcrumbLink render={<Link to={item.caminho} />}>
+                            {item.nome}
                           </BreadcrumbLink>
                         )}
                       </BreadcrumbItem>
@@ -133,7 +133,7 @@ export default function Index() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <main className="flex min-w-0 flex-1 flex-col gap-4 p-4 pt-0 [overflow-wrap:anywhere]">
           <Outlet />
         </main>
       </SidebarInset>

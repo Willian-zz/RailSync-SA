@@ -161,7 +161,7 @@ export default function TrensGerenciamento() {
   });
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex min-w-0 flex-col gap-6 sm:p-6">
       {/* Cabeçalho */}
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold tracking-tight">
@@ -175,7 +175,7 @@ export default function TrensGerenciamento() {
 
       {/* Barra de pesquisa e filtros */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <ButtonGroup className="w-full lg:max-w-md">
+        <ButtonGroup className="w-full min-w-0 lg:max-w-md">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border px-3">
             <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
 
@@ -290,7 +290,7 @@ export default function TrensGerenciamento() {
       )}
 
       {/* Tabela de trens */}
-      <div className="overflow-hidden rounded-md border">
+      <div className="min-w-0 overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>

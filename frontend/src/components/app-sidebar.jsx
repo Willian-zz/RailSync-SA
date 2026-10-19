@@ -78,7 +78,7 @@ export function AppSidebar({
         items: [
           {
             title: "Leituras",
-            url: "#",
+            url: "/index/trensLeituras",
           },
           {
             title: "Gerenciamento",

@@ -284,6 +284,7 @@
   margin: 0 auto;
 
   min-height: 100svh;
+  min-width: 0;
 
   width: 100%;
 

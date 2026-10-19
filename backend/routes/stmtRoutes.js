@@ -1,11 +1,96 @@
 import express from "express";
-import argon2 from "argon2";
-import jwt from "jsonwebtoken";
 import banco from "../src/banco.js";
+import { listarLeituras, obterRelatorio, salvarLimites, tiposLeituras, validarLimites } from "../src/leituras.js";
 
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET;
+function emTransacao(operacao) {
+    banco.exec("BEGIN");
+    try {
+        const resultado = operacao();
+        banco.exec("COMMIT");
+        return resultado;
+    } catch (error) {
+        banco.exec("ROLLBACK");
+        throw error;
+    }
+}
+
+//==========================
+//LEITURAS
+//==========================
+
+router.get("/readings", (req, res) => {
+    const pesquisa = req.query.pesquisa ?? "";
+    const erro = req.query.erro ?? "";
+
+    if (typeof pesquisa !== "string" || typeof erro !== "string" ||
+        (erro && erro !== "todos" && !tiposLeituras.includes(erro))) {
+        return res.status(400).json({ message: "Filtro de leituras inválido." });
+    }
+
+    try {
+        res.json(listarLeituras(banco, { pesquisa: pesquisa.trim(), erro }));
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Não foi possível carregar as leituras." });
+    }
+});
+
+router.get("/readings/:id/report", (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+        return res.status(400).json({ message: "Identificador de leitura inválido." });
+    }
+    try {
+        const relatorio = obterRelatorio(banco, id);
+        if (!relatorio) {
+            return res.status(404).json({ message: "Leitura não encontrada." });
+        }
+        res.set("Cache-Control", "no-store").json(relatorio);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Não foi possível gerar o relatório." });
+    }
+});
+
+// Recebe os registros dos sensores; a página apenas consulta e atualiza a lista.
+router.post("/readings", (req, res) => {
+    const { sensor_id, valor, registrada_em } = req.body ?? {};
+
+    if (!Number.isSafeInteger(sensor_id) || sensor_id <= 0 ||
+        typeof valor !== "number" || !Number.isFinite(valor)) {
+        return res.status(400).json({ message: "Informe um sensor e um valor numérico válidos." });
+    }
+
+    if (registrada_em !== undefined && (
+        typeof registrada_em !== "string" ||
+        !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?(Z|[+-]\d{2}:\d{2})$/.test(registrada_em) ||
+        !Number.isFinite(Date.parse(registrada_em))
+    )) {
+        return res.status(400).json({ message: "Informe a data em formato ISO com fuso horário." });
+    }
+
+    try {
+        const sensor = banco.prepare("SELECT id FROM sensores WHERE id = ?").get(sensor_id);
+        if (!sensor) {
+            return res.status(404).json({ message: "Sensor não encontrado." });
+        }
+
+        const data = new Date(registrada_em ?? Date.now()).toISOString();
+        const resultado = banco.prepare(`
+            INSERT INTO leituras (sensor_id, valor, registrada_em) VALUES (?, ?, ?)
+        `).run(sensor_id, valor, data);
+
+        res.status(201).json({
+            id: Number(resultado.lastInsertRowid),
+            message: "Leitura registrada com sucesso.",
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Não foi possível registrar a leitura." });
+    }
+});
 
 
 //==========================
@@ -58,7 +143,11 @@ router.get("/trains/:id", async (req, res) => {
             })
         }
 
-        res.json(trem);
+        const limites = banco.prepare(
+            "SELECT tipo, unidade, valor_minimo, valor_maximo FROM limites_trens WHERE trem_id = ?"
+        ).all(id);
+
+        res.json({ ...trem, limites });
     } catch (error) {
         res.status(401).json({
             message: "Não foi possível fazer a pesquisa."
@@ -68,7 +157,7 @@ router.get("/trains/:id", async (req, res) => {
 
 router.post("/trains", async(req, res) => {
     try {
-        const {prefixo, modelo, ano, situacao} = req.body;
+        const {prefixo, modelo, ano, situacao, limites} = req.body;
 
         if(!prefixo || !modelo || !ano || !situacao) {
             return res.status(400).json({
@@ -84,21 +173,26 @@ router.post("/trains", async(req, res) => {
             });
         }
 
-        banco.prepare(`
-            INSERT INTO trens
-            (prefixo, modelo, ano, situacao)
-            VALUES (?, ?, ?, ?)
-            `)
-            .run(prefixo, modelo, ano, situacao);
+        const limitesValidados = limites === undefined ? [] : validarLimites(limites);
+
+        const tremId = emTransacao(() => {
+            const resultado = banco.prepare(`
+                INSERT INTO trens (prefixo, modelo, ano, situacao) VALUES (?, ?, ?, ?)
+            `).run(prefixo, modelo, ano, situacao);
+            const id = Number(resultado.lastInsertRowid);
+            salvarLimites(banco, id, limitesValidados);
+            return id;
+        });
 
         res.status(201).json({
+            id: tremId,
             message: "Trem cadastrado com sucesso."
         });
     } catch(error) {
         console.error(error);
 
-        res.status(500).json({
-            message: "Erro ao criar o trem."
+        res.status(error.status || 500).json({
+            message: error.status === 400 ? error.message : "Erro ao criar o trem."
         });
     }
 })
@@ -106,7 +200,7 @@ router.post("/trains", async(req, res) => {
 router.put("/trains/:id", async (req, res) => {
     try {
         const { id } = req.params;
-        const { prefixo, modelo, ano, situacao } = req.body;
+        const { prefixo, modelo, ano, situacao, limites } = req.body;
 
         if (!prefixo || !modelo || !ano || !situacao) {
             return res.status(400).json({
@@ -136,12 +230,18 @@ router.put("/trains/:id", async (req, res) => {
             });
         }
 
-        // Atualiza os dados do trem
-        banco.prepare(`
-            UPDATE trens
-            SET prefixo = ?, modelo = ?, ano = ?, situacao = ?
-            WHERE id = ?
-        `).run(prefixo, modelo, ano, situacao, id);
+        const limitesValidados = limites === undefined ? undefined : validarLimites(limites);
+
+        emTransacao(() => {
+            banco.prepare(`
+                UPDATE trens
+                SET prefixo = ?, modelo = ?, ano = ?, situacao = ?
+                WHERE id = ?
+            `).run(prefixo, modelo, ano, situacao, id);
+
+            // Clientes antigos que não enviam limites preservam a configuração.
+            if (limitesValidados !== undefined) salvarLimites(banco, id, limitesValidados);
+        });
 
         return res.status(200).json({
             message: "Trem atualizado com sucesso."
@@ -150,8 +250,8 @@ router.put("/trains/:id", async (req, res) => {
     } catch (error) {
         console.error(error);
 
-        return res.status(500).json({
-            message: "Erro ao atualizar o trem."
+        return res.status(error.status || 500).json({
+            message: error.status === 400 ? error.message : "Erro ao atualizar o trem."
         });
     }
 });

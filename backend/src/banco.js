@@ -1,6 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
+import { popularBanco } from "./dadosIniciais.js";
 
-const banco = new DatabaseSync("trens.db");
+const banco = new DatabaseSync(process.env.DATABASE_PATH || "trens.db");
+
+banco.exec("PRAGMA foreign_keys = ON;");
 
 banco.exec(`
         CREATE TABLE IF NOT EXISTS usuarios (
@@ -50,6 +53,23 @@ banco.exec(`
                 ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS limites_trens (
+            id INTEGER PRIMARY KEY,
+            trem_id INTEGER NOT NULL,
+            tipo TEXT NOT NULL CHECK (
+                tipo IN ('velocidade', 'temperatura', 'consumo', 'vibracao', 'capacidade')
+            ),
+            unidade TEXT NOT NULL,
+            valor_minimo REAL,
+            valor_maximo REAL,
+            UNIQUE (trem_id, tipo),
+            CHECK (valor_minimo IS NOT NULL OR valor_maximo IS NOT NULL),
+            CHECK (valor_minimo IS NULL OR valor_maximo IS NULL OR valor_minimo <= valor_maximo),
+            FOREIGN KEY (trem_id) REFERENCES trens(id)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+        );
+
         CREATE INDEX IF NOT EXISTS idx_trens_linha
             ON trens(linha_id);
 
@@ -73,5 +93,8 @@ if (total.quantidade === 0) {
   inserir.run("AUT-2001", "Automotriz VLI", 2019, "ativo");
   inserir.run("LOC-1004", "EMD GT46AC", 1999, "inativo");
 }
+
+// Amostras de teste persistentes para visualizar as leituras e seus relatórios.
+if (process.env.NODE_ENV !== "test") popularBanco(banco);
 
 export default banco;

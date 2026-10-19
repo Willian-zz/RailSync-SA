@@ -157,7 +157,7 @@ export default function SensoresGerenciamento() {
   });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex min-w-0 flex-col gap-6">
       {/* Cabeçalho */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
@@ -171,7 +171,7 @@ export default function SensoresGerenciamento() {
 
       {/* Barra de pesquisa e filtros */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <ButtonGroup className="w-full lg:max-w-md">
+        <ButtonGroup className="w-full min-w-0 lg:max-w-md">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-md border px-3">
             <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
 
@@ -258,7 +258,7 @@ export default function SensoresGerenciamento() {
       {erro && <p className="text-sm text-destructive">{erro}</p>}
 
       {/* Tabela */}
-      <div className="overflow-hidden rounded-md border">
+      <div className="min-w-0 overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
