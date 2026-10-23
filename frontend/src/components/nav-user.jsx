@@ -77,10 +77,6 @@ export function NavUser({
               <Moon />
               Tema escuro
             </DropdownMenuCheckboxItem>
-            <DropdownMenuItem>
-            <HugeiconsIcon icon={CheckmarkBadgeIcon} strokeWidth={2} />
-                Account
-            </DropdownMenuItem>
             <DropdownMenuItem id="btn-logout" onClick={onLogout}>
               <HugeiconsIcon icon={LogoutIcon} strokeWidth={2}/>
               Log out

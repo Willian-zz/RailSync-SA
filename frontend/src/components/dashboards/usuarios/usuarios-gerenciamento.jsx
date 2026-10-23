@@ -199,7 +199,6 @@ export default function UsuariosGerenciamento() {
           </TableBody>
         </Table>
       </div>
-
     </div>
   );
 }

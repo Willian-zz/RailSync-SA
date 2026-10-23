@@ -335,11 +335,6 @@ export default function RotasGerenciamento() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">
-        A situação considera o cadastro, as linhas e os trens disponíveis.
-        Próximas saídas em horário de Brasília; atualização automática a cada
-        minuto.
-      </p>
     </div>
   );
 }
