@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 
 import { Fragment } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
@@ -26,6 +27,10 @@ const nomesRotas = {
   trensGerenciamento: "Gerenciamento de trens",
   sensoresGerenciamento: "Gerenciamento de sensores",
   trens: "Trens",
+  rotasGerenciamento: "Gerenciamento de rotas",
+  linhasGerenciamento: "Gerenciamento de linhas",
+  linhas: "Consultar linhas",
+  usuariosGerenciamento: "Gerenciamento de usuários",
   novo: "Novo",
   editar: "Editar",
 };
@@ -50,6 +55,7 @@ function gerarBreadcrumb(pathname) {
 
 export default function Index() {
   const navigate = useNavigate();
+  const { atualizarSessao } = useAuth();
   const location = useLocation();
 
   const breadcrumbs = gerarBreadcrumb(location.pathname);
@@ -81,6 +87,7 @@ export default function Index() {
       }
 
       console.log(dados.message);
+      await atualizarSessao();
       navigate("/login");
     } catch (error) {
       console.error(

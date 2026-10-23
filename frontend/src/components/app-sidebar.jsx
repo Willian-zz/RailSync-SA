@@ -1,155 +1,39 @@
-"use client"
+import { Cpu, TrainTrack, TramFront, Route, Search, Users } from 'lucide-react';
+import { NavMain } from '@/components/nav-main';
+import { NavUser } from '@/components/nav-user';
+import { SidebarLabel } from '@/components/sidebar-label';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from '@/components/ui/sidebar';
+import { useAuth } from '@/hooks/use-auth';
+import { NotificacoesSidebar } from '@/components/notificacoes/notificacoes-sidebar';
 
-import * as React from "react"
-import { Users, Cpu, TrainTrack, TramFront } from "lucide-react"
-
-import { NavMain } from "@/components/nav-main"
-import { NavDev } from "@/components/nav-dev"
-import { NavUser } from "@/components/nav-user"
-import { SidebarLabel } from "@/components/sidebar-label"
-
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@/components/ui/sidebar"
-
-export function AppSidebar({
-  onLogout,
-  ...props
-}) {
-  const [usuario, setUsuario] = React.useState(null)
-
-  React.useEffect(() => {
-    async function buscarUsuario() {
-      try {
-        const resposta = await fetch(
-          "http://localhost:3000/api/auth/me",
-          {
-            credentials: "include",
-            cache: "no-store",
-          }
-        )
-
-        if (!resposta.ok) {
-          setUsuario(null)
-          return
-        }
-
-        const dados = await resposta.json()
-        setUsuario(dados)
-      } catch (erro) {
-        console.error("Erro ao buscar usuário:", erro)
-        setUsuario(null)
-      }
-    }
-
-    buscarUsuario()
-  }, [])
-
-  if (!usuario) {
-    return null
-  }
-
-  const nomes = usuario?.name?.trim().split(/\s+/) ?? []
-
-  const iniciais =
-    (nomes[0]?.[0] || "") +
-    (nomes[1]?.[0] || "")
-
-  const data = {
-    user: {
-      name: usuario.name,
-      email: usuario.email,
-      avatar: "/avatars/shadcn.jpg",
-      shortening: iniciais.toUpperCase(),
-    },
-
-    navMain: [
-      {
-        title: "Trens",
-        url: "#",
-        icon: (
-          <TramFront />
-        ),
-        isActive: true,
-        items: [
-          {
-            title: "Leituras",
-            url: "/index/trensLeituras",
-          },
-          {
-            title: "Gerenciamento",
-            url: "/index/trensGerenciamento",
-          },
-        ],
-      },
-
-      {
-        title: "Linhas",
-        url: "#",
-        icon: (
-          <TrainTrack />
-        ),
-        items: [
-          {
-            title: "Gerenciamento",
-            url: "#",
-          },
-        ],
-      },
-
-      {
-        title: "Sensores",
-        url: "#",
-        icon: (
-          <Cpu />
-        ),
-        items: [
-          {
-            title: "Leituras",
-            url: "#",
-          },
-          {
-            title: "Gerenciamento",
-            url: "/index/sensoresGerenciamento",
-          },
-        ],
-      },
-    ],
-
-    devOptions: [
-      {
-        name: "Usuários",
-        url: "#",
-        icon: (
-          <Users />
-        ),
-      },
-    ],
-  }
-
-  return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <SidebarLabel />
-      </SidebarHeader>
-
-      <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDev projects={data.devOptions} />
-      </SidebarContent>
-
-      <SidebarFooter>
-        <NavUser
-          user={data.user}
-          onLogout={onLogout}
-        />
-      </SidebarFooter>
-
-      <SidebarRail />
-    </Sidebar>
-  )
+export function AppSidebar({ onLogout, ...props }) {
+  const { usuario } = useAuth();
+  if (!usuario) return null;
+  const operacional = ['operario', 'dev'].includes(usuario.cargo);
+  const iniciais = usuario.name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+  const items = [
+    { id: 'viajar', title: 'Viajar', icon: <Search />, isActive: true, items: [{ title: 'Consultar linhas', url: '/index/linhas' }] },
+    ...(operacional ? [
+      { id: 'trens', title: 'Trens', icon: <TramFront />, isActive: true, items: [
+        { title: 'Leituras', url: '/index/trensLeituras' }, { title: 'Gerenciamento', url: '/index/trensGerenciamento' },
+      ] },
+      { id: 'rotas', title: 'Rotas', icon: <Route />, isActive: true, items: [{ title: 'Gerenciamento', url: '/index/rotasGerenciamento' }] },
+      { id: 'linhas', title: 'Linhas', icon: <TrainTrack />, isActive: true, items: [{ title: 'Gerenciamento', url: '/index/linhasGerenciamento' }] },
+      { id: 'sensores', title: 'Sensores', icon: <Cpu />, items: [{ title: 'Gerenciamento', url: '/index/sensoresGerenciamento' }] },
+    ] : []),
+    ...(usuario.cargo === 'dev' ? [
+      { id: 'usuarios', title: 'Usuários', icon: <Users />, items: [{ title: 'Gerenciamento', url: '/index/usuariosGerenciamento' }] },
+    ] : []),
+  ];
+  const cargos = { usuario: 'Usuário', operario: 'Operário', dev: 'Dev' };
+  return <Sidebar collapsible="icon" {...props}>
+    <SidebarHeader><SidebarLabel /></SidebarHeader>
+    <SidebarContent><NavMain items={items} /></SidebarContent>
+    <SidebarFooter>
+      {operacional && <NotificacoesSidebar key={usuario.id} />}
+      <p className="px-2 text-left text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">{cargos[usuario.cargo]}</p>
+      <NavUser user={{ name: usuario.name, email: usuario.email, avatar: '', shortening: iniciais }} onLogout={onLogout} />
+    </SidebarFooter>
+    <SidebarRail />
+  </Sidebar>;
 }

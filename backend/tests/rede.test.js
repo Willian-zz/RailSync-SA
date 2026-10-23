@@ -1,0 +1,124 @@
+import assert from 'node:assert/strict';
+import { after, test } from 'node:test';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import jwt from 'jsonwebtoken';
+import { migrarBanco } from '../src/migracoes.js';
+import { consultarRede, proximaSaida } from '../src/rede.js';
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = 'rede-teste-local';
+const pasta = mkdtempSync(join(tmpdir(), 'railsync-rede-'));
+process.env.DATABASE_PATH = join(pasta, 'banco.db');
+const { default: banco } = await import('../src/banco.js');
+const { default: rede } = await import('../routes/redeRoutes.js');
+const { default: auth } = await import('../routes/authRoutes.js');
+const { default: stmt } = await import('../routes/stmtRoutes.js');
+const app = express();
+app.use(express.json(), cookieParser());
+app.use('/rede', rede); app.use('/auth', auth); app.use('/stmt', stmt);
+const servidor = app.listen(0, '127.0.0.1');
+await new Promise(resolve => servidor.once('listening', resolve));
+const base = `http://127.0.0.1:${servidor.address().port}`;
+const contas = {};
+for (const cargo of ['usuario', 'operario', 'dev']) {
+ const id = Number(banco.prepare('INSERT INTO usuarios (fullname,email,senha_hash,cargo) VALUES (?,?,?,?)').run(cargo,`${cargo}@test.local`,'hash',cargo).lastInsertRowid);
+ contas[cargo] = { id, token: jwt.sign({ id, cargo: 'dev' }, process.env.JWT_SECRET) };
+}
+async function chamar(path, method = 'GET', body, cargo = 'operario') {
+ const response = await fetch(base + path, {method, headers:{'Content-Type':'application/json',...(cargo ? {Cookie:`token=${contas[cargo].token}`} : {})},body:body===undefined?undefined:JSON.stringify(body)});
+ return {status:response.status,dados:await response.json()};
+}
+after(async()=>{await new Promise(r=>servidor.close(r));banco.close();rmSync(pasta,{recursive:true,force:true});});
+
+test('migração preserva contas, hashes, vínculos e sequência, e é idempotente',()=>{
+ const db=new DatabaseSync(':memory:');
+ db.exec(`PRAGMA foreign_keys=ON;
+ CREATE TABLE usuarios(id INTEGER PRIMARY KEY AUTOINCREMENT,fullname TEXT NOT NULL,email TEXT NOT NULL UNIQUE,senha_hash TEXT NOT NULL,cargo TEXT NOT NULL DEFAULT 'user');
+ CREATE TABLE linhas(id INTEGER PRIMARY KEY,nome TEXT NOT NULL UNIQUE);
+ CREATE TABLE trens(id INTEGER PRIMARY KEY,prefixo TEXT,linha_id INTEGER REFERENCES linhas(id) ON DELETE SET NULL);
+ INSERT INTO usuarios VALUES(5,'Pessoa','pessoa@test','hash-original','user'),(8,'Admin','admin@test','hash-admin','admin'),(20,'Excluído','excluido@test','hash','user');
+ DELETE FROM usuarios WHERE id=20; INSERT INTO linhas VALUES(3,'Linha existente');INSERT INTO trens VALUES(4,'LOC-ORIGINAL',3);`);
+ migrarBanco(db);migrarBanco(db);
+ assert.equal(db.prepare('SELECT cargo FROM usuarios WHERE id=5').get().cargo,'usuario');
+ assert.equal(db.prepare('SELECT cargo FROM usuarios WHERE id=8').get().cargo,'dev');
+ assert.equal(db.prepare('SELECT senha_hash FROM usuarios WHERE id=5').get().senha_hash,'hash-original');
+ assert.equal(db.prepare('SELECT linha_id FROM trens WHERE id=4').get().linha_id,3);
+ assert.equal(Number(db.prepare("INSERT INTO usuarios(fullname,email,senha_hash) VALUES('Novo','novo@test','h')").run().lastInsertRowid),21);
+ assert.throws(()=>db.prepare("UPDATE usuarios SET cargo='invalido'").run());
+ assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);db.close();
+});
+test('API bloqueia gerenciamento para usuários e consulta o cargo atual do banco',async()=>{
+ assert.equal((await chamar('/rede/consulta','GET',undefined,null)).status,401);
+ assert.equal((await chamar('/rede/consulta','GET',undefined,'usuario')).status,200);
+ for(const path of ['/rede/rotas','/rede/linhas','/rede/opcoes','/stmt/trains','/stmt/sensors','/stmt/readings','/auth/']) assert.equal((await chamar(path,'GET',undefined,'usuario')).status,403,path);
+ for(const method of ['POST','PUT','DELETE']) assert.equal((await chamar('/rede/rotas'+(method==='POST'?'':'/1'),method,{},'usuario')).status,403);
+ assert.equal((await chamar('/auth/','GET',undefined,'operario')).status,403);
+ const dev=await chamar('/auth/','GET',undefined,'dev');assert.equal(dev.status,200);assert.equal(dev.dados[0].senha_hash,undefined);
+ assert.equal((await chamar('/auth/me','GET',undefined,'usuario')).dados.cargo,'usuario');
+ banco.prepare("UPDATE usuarios SET cargo='usuario' WHERE id=?").run(contas.operario.id);
+ assert.equal((await chamar('/stmt/trains')).status,403);
+ banco.prepare("UPDATE usuarios SET cargo='operario' WHERE id=?").run(contas.operario.id);
+ assert.equal((await chamar('/stmt/trains')).status,200);
+});
+test('cadastro público ignora cargo enviado e permite login',async()=>{
+ assert.equal((await chamar('/auth/register','POST',{fullname:'Cadastro',email:'cadastro@test.local',senha:'senha-segura',cargo:'dev'},null)).status,201);
+ assert.equal(banco.prepare("SELECT cargo FROM usuarios WHERE email='cadastro@test.local'").get().cargo,'usuario');
+ assert.equal((await chamar('/auth/login','POST',{email:'cadastro@test.local',senha:'senha-segura'},null)).status,200);
+});
+test('próxima saída considera Brasília e a virada do dia',()=>{
+ const horarios=[{horario:'08:00',trem_id:1},{horario:'18:00',trem_id:2}];
+ assert.equal(proximaSaida(horarios,new Date('2026-10-23T12:00:00Z')).horario,'18:00');
+ const p=proximaSaida(horarios,new Date('2026-10-24T02:00:00Z'));assert.equal(p.data,'2026-10-24');assert.equal(p.amanha,true);
+ assert.equal(proximaSaida([],new Date()),null);
+});
+test('reiniciar preserva horários editados, transferências, cargos e exclusões dos dados iniciais',()=>{
+ const arquivo = join(pasta, 'reinicio.db');
+ const env = { ...process.env, DATABASE_PATH: arquivo, NODE_ENV: 'development' };
+ const iniciar = () => execFileSync(process.execPath, ['--input-type=module', '-e', "import('./src/banco.js').then(({default:b})=>b.close())"], { env });
+ iniciar();
+ let db = new DatabaseSync(arquivo); db.exec('PRAGMA foreign_keys=ON');
+ const rotaId = db.prepare("SELECT id FROM rotas WHERE nome='Eixo Norte'").get().id;
+ const linhaId = Number(db.prepare("INSERT INTO linhas(nome,rota_id) VALUES('Linha editada',?)").run(rotaId).lastInsertRowid);
+ const tremId = db.prepare("SELECT id FROM trens WHERE prefixo='LOC-2001'").get().id;
+ db.prepare('UPDATE trens SET linha_id=? WHERE id=?').run(linhaId,tremId);
+ db.prepare("INSERT INTO horarios_linhas(linha_id,trem_id,horario) VALUES(?,?,'11:11')").run(linhaId,tremId);
+ db.prepare("INSERT INTO usuarios(fullname,email,senha_hash,cargo) VALUES('Responsável','cargo@test','hash','operario')").run();
+ db.prepare("DELETE FROM linhas WHERE nome='Linha Leste'").run(); db.close();
+ iniciar(); db = new DatabaseSync(arquivo);
+ assert.equal(db.prepare('SELECT linha_id FROM trens WHERE id=?').get(tremId).linha_id,linhaId);
+ assert.equal(db.prepare('SELECT horario FROM horarios_linhas WHERE trem_id=?').get(tremId).horario,'11:11');
+ assert.equal(db.prepare("SELECT cargo FROM usuarios WHERE email='cargo@test'").get().cargo,'operario');
+ assert.equal(db.prepare("SELECT id FROM linhas WHERE nome='Linha Leste'").get(),undefined);
+ assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]); db.close();
+});
+test('CRUD, status, validação atômica, transferência e exclusão com dados relacionados',async()=>{
+ const tremId=Number(banco.prepare("INSERT INTO trens(prefixo,modelo,ano,situacao) VALUES('REDE-001','Teste',2020,'ativo')").run().lastInsertRowid);
+ const rotaBody={nome:'Rota de teste',origem:'Central',destino:'Norte',situacao:'ativo',linha_ids:[]};
+ const rota=await chamar('/rede/rotas','POST',rotaBody);assert.equal(rota.status,201);
+ const linhaBody={nome:'Linha de teste',situacao:'ativo',rota_id:rota.dados.id,trem_ids:[tremId],horarios:[{trem_id:tremId,horario:'08:00'},{trem_id:tremId,horario:'18:00'}]};
+ const linha=await chamar('/rede/linhas','POST',linhaBody);assert.equal(linha.status,201);
+ assert.equal((await chamar(`/rede/rotas/${rota.dados.id}`)).dados.linhas[0].trens[0].id,tremId);
+ let atual=consultarRede(banco,new Date('2026-10-23T12:00:00Z'));assert.equal(atual.rotas[0].situacao,'ativo');assert.equal(atual.rotas[0].proxima_saida.horario,'18:00');
+ banco.prepare("UPDATE trens SET situacao='manutencao' WHERE id=?").run(tremId);
+ atual=consultarRede(banco);assert.equal(atual.rotas[0].situacao,'manutencao');assert.equal(atual.linhas[0].proxima_saida,null);
+ banco.prepare("UPDATE trens SET situacao='ativo' WHERE id=?").run(tremId);
+ assert.equal((await chamar(`/rede/rotas/${rota.dados.id}`,'PUT',{...rotaBody,situacao:'inativo',linha_ids:[linha.dados.id]})).status,200);
+ assert.equal((await chamar(`/rede/linhas/${linha.dados.id}`)).dados.situacao,'inativo');
+ assert.equal((await chamar(`/rede/linhas/${linha.dados.id}`,'PUT',{...linhaBody,horarios:[{trem_id:tremId,horario:'25:00'}]})).status,400);
+ assert.equal(banco.prepare('SELECT COUNT(*) AS n FROM horarios_linhas WHERE linha_id=?').get(linha.dados.id).n,2);
+ assert.equal((await chamar('/rede/linhas','POST',linhaBody)).status,409);
+ const nova=await chamar('/rede/linhas','POST',{...linhaBody,nome:'Linha transferida',horarios:[{trem_id:tremId,horario:'12:00'}]});assert.equal(nova.status,201);
+ assert.equal(banco.prepare('SELECT COUNT(*) AS n FROM horarios_linhas WHERE linha_id=?').get(linha.dados.id).n,0);
+ assert.equal(banco.prepare('SELECT linha_id FROM trens WHERE id=?').get(tremId).linha_id,nova.dados.id);
+ assert.throws(()=>banco.prepare('INSERT INTO horarios_linhas(linha_id,trem_id,horario) VALUES(?,?,?)').run(linha.dados.id,tremId,'13:00'));
+ assert.equal((await chamar(`/rede/rotas/${rota.dados.id}`,'DELETE')).status,200);
+ assert.equal(banco.prepare('SELECT rota_id FROM linhas WHERE id=?').get(nova.dados.id).rota_id,null);
+ assert.equal((await chamar(`/rede/linhas/${nova.dados.id}`,'DELETE')).status,200);
+ assert.equal(banco.prepare('SELECT linha_id FROM trens WHERE id=?').get(tremId).linha_id,null);
+ assert.deepEqual(banco.prepare('PRAGMA foreign_key_check').all(),[]);
+});

@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Restaura a escolha antes de desenhar a página, evitando um flash claro.
+      try {
+        const escuro = localStorage.getItem('railsync-tema') === 'escuro';
+        document.documentElement.classList.toggle('dark', escuro);
+        document.documentElement.style.colorScheme = escuro ? 'dark' : 'light';
+      } catch {}
+    </script>
     <title>frontend</title>
   </head>
   <body>

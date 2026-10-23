@@ -1,8 +1,10 @@
 import express from "express";
 import banco from "../src/banco.js";
+import { autenticar, exigirCargos } from "../middleware/permissoes.js";
 import { listarLeituras, obterRelatorio, salvarLimites, tiposLeituras, validarLimites } from "../src/leituras.js";
 
 const router = express.Router();
+router.use(autenticar, exigirCargos("operario"));
 
 function emTransacao(operacao) {
     banco.exec("BEGIN");

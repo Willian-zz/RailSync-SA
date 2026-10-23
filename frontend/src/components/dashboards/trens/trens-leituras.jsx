@@ -1,3 +1,4 @@
+import { fetchAutenticado } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertTriangleIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
@@ -76,7 +77,7 @@ export default function TrensLeituras() {
 
     async function buscarLeituras() {
       try {
-        const resposta = await fetch("http://localhost:3000/api/stmt/readings", {
+        const resposta = await fetchAutenticado("http://localhost:3000/api/stmt/readings", {
           signal: controller.signal,
           cache: "no-store",
         });

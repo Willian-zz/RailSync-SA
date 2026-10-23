@@ -1,3 +1,4 @@
+import { fetchAutenticado } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 
@@ -36,7 +37,7 @@ export default function TrensFormulario() {
   ];
 
   async function buscarTremPorId(id) {
-    const resposta = await fetch(`http://localhost:3000/api/stmt/trains/${id}`);
+    const resposta = await fetchAutenticado(`http://localhost:3000/api/stmt/trains/${id}`);
 
     const resultado = await resposta.json().catch(() => null);
 
@@ -118,7 +119,7 @@ export default function TrensFormulario() {
     };
 
     try {
-      const resposta = await fetch(
+      const resposta = await fetchAutenticado(
         editando
           ? `http://localhost:3000/api/stmt/trains/${id}`
           : "http://localhost:3000/api/stmt/trains",

@@ -4,7 +4,9 @@ import cookieParser from "cookie-parser";
 
 import authRoutes from "../routes/authRoutes.js"
 import stmtRoutes from "../routes/stmtRoutes.js"
-import banco from "./banco.js";
+import redeRoutes from "../routes/redeRoutes.js";
+import notificacoesRoutes from "../routes/notificacoesRoutes.js";
+import usuariosRoutes from "../routes/usuariosRoutes.js";
 
 const app = express();
 
@@ -18,6 +20,9 @@ app.use(cookieParser()); //Enviar cookies e salvar sessão
 
 app.use("/api/auth", authRoutes);
 app.use("/api/stmt", stmtRoutes);
+app.use("/api/rede", redeRoutes);
+app.use("/api/notificacoes", notificacoesRoutes);
+app.use("/api/usuarios", usuariosRoutes);
 
 app.listen(3000, () => { //Ao rodar vai abrir o servidor na porta 3000
     console.log("Servidor rodando em http://localhost:3000");

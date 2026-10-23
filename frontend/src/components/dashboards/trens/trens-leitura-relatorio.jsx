@@ -1,5 +1,6 @@
+import { fetchAutenticado } from "@/lib/api";
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { AlertTriangleIcon, ArrowLeftIcon, RefreshCwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,6 +29,7 @@ function diferencaDoLimite(medicao) {
 export default function TrensLeituraRelatorio() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hash } = useLocation();
   const [atualizacao, setAtualizacao] = useState(0);
   const [estado, setEstado] = useState({ id: null, dados: null, carregando: true, erro: "" });
 
@@ -35,7 +37,7 @@ export default function TrensLeituraRelatorio() {
     const controller = new AbortController();
     async function carregarRelatorio() {
       try {
-        const resposta = await fetch(`http://localhost:3000/api/stmt/readings/${encodeURIComponent(id)}/report`, {
+        const resposta = await fetchAutenticado(`http://localhost:3000/api/stmt/readings/${encodeURIComponent(id)}/report`, {
           signal: controller.signal,
           cache: "no-store",
         });
@@ -67,6 +69,12 @@ export default function TrensLeituraRelatorio() {
   const relatorio = estado.id === id ? estado.dados : null;
   const erro = estado.id === id ? estado.erro : "";
   const faltantes = relatorio ? tiposLeituras.filter((tipo) => !relatorio.leitura.medicoes[tipo.tipo].length) : [];
+
+  useEffect(() => {
+    if (relatorio && hash.startsWith('#medicao-')) {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'center', inline: 'nearest' });
+    }
+  }, [relatorio, hash]);
 
   return (
     <div className="flex min-w-0 flex-col gap-6 sm:p-6">
@@ -144,7 +152,7 @@ export default function TrensLeituraRelatorio() {
                 </TableHeader>
                 <TableBody>
                   {relatorio.medicoes.map((medicao) => (
-                    <TableRow key={medicao.id} className={medicao.em_erro ? "bg-destructive/5" : ""}>
+                    <TableRow id={`medicao-${medicao.id}`} key={medicao.id} className={`${medicao.em_erro ? "bg-destructive/5" : ""} scroll-mt-6 target:outline-2 target:outline-destructive target:-outline-offset-2`}>
                       <TableCell className="text-center font-medium">{medicao.sensor_codigo || "----"}</TableCell>
                       <TableCell className="text-center">{tiposLeituras.find((tipo) => tipo.tipo === medicao.tipo)?.label || medicao.tipo}</TableCell>
                       <TableCell className={`text-center font-medium ${medicao.em_erro ? "text-destructive" : ""}`}>{formatarNumero(medicao.valor, medicao.unidade)}</TableCell>

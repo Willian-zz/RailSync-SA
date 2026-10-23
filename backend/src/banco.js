@@ -1,5 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { popularBanco } from "./dadosIniciais.js";
+import { migrarBanco } from "./migracoes.js";
+import { popularRede } from "./dadosRede.js";
+import { criarEstruturaNotificacoes } from "./notificacoes.js";
 
 const banco = new DatabaseSync(process.env.DATABASE_PATH || "trens.db");
 
@@ -11,7 +14,7 @@ banco.exec(`
             fullname TEXT NOT NULL,
             email TEXT NOT NULL UNIQUE,
             senha_hash TEXT NOT NULL,
-            cargo TEXT NOT NULL DEFAULT 'user'
+            cargo TEXT NOT NULL DEFAULT 'usuario' CHECK (cargo IN ('usuario', 'operario', 'dev'))
         );
 
         CREATE TABLE IF NOT EXISTS linhas (
@@ -80,6 +83,9 @@ banco.exec(`
             ON leituras(sensor_id, registrada_em DESC);
     `);
 
+migrarBanco(banco);
+criarEstruturaNotificacoes(banco);
+
 const total = banco.prepare("SELECT COUNT(*) AS quantidade FROM trens").get();
 
 if (total.quantidade === 0) {
@@ -95,6 +101,12 @@ if (total.quantidade === 0) {
 }
 
 // Amostras de teste persistentes para visualizar as leituras e seus relatórios.
-if (process.env.NODE_ENV !== "test") popularBanco(banco);
+if (process.env.NODE_ENV !== "test") {
+  if (!banco.prepare("SELECT 1 FROM migracoes_dados WHERE nome = 'populacao-v2'").get()) {
+    popularBanco(banco);
+    banco.prepare("INSERT INTO migracoes_dados (nome) VALUES ('populacao-v2')").run();
+  }
+  popularRede(banco);
+}
 
 export default banco;

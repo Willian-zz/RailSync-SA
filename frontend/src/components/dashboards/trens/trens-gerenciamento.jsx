@@ -1,3 +1,4 @@
+import { fetchAutenticado } from "@/lib/api";
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -51,7 +52,7 @@ export default function TrensGerenciamento() {
       setCarregando(true);
       setErro("");
 
-      const resposta = await fetch(
+      const resposta = await fetchAutenticado(
         "http://localhost:3000/api/stmt/trains"
       );
 
@@ -73,7 +74,7 @@ export default function TrensGerenciamento() {
   // Busca a quantidade de trens por situação
   async function buscarSituacoes() {
     try {
-      const resposta = await fetch(
+      const resposta = await fetchAutenticado(
         "http://localhost:3000/api/stmt/trains/status"
       );
 
@@ -108,7 +109,7 @@ export default function TrensGerenciamento() {
     if (!confirmar) return;
 
     try {
-      const resposta = await fetch(
+      const resposta = await fetchAutenticado(
         `http://localhost:3000/api/stmt/trains/${id}`,
         {
           method: "DELETE",

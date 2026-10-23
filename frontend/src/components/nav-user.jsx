@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -19,13 +20,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { UnfoldMoreIcon, SparklesIcon, CheckmarkBadgeIcon, CreditCardIcon, NotificationIcon, LogoutIcon } from "@hugeicons/core-free-icons"
+import { UnfoldMoreIcon, CheckmarkBadgeIcon, LogoutIcon } from "@hugeicons/core-free-icons"
+import { Moon } from 'lucide-react'
+import { useTema } from '@/hooks/use-tema'
 
 export function NavUser({
   user,
   onLogout
 }) {
   const { isMobile } = useSidebar()
+  const { tema, setTema } = useTema()
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -66,6 +70,13 @@ export function NavUser({
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={tema === 'escuro'}
+              onCheckedChange={escuro => setTema(escuro ? 'escuro' : 'claro')}
+            >
+              <Moon />
+              Tema escuro
+            </DropdownMenuCheckboxItem>
             <DropdownMenuItem>
             <HugeiconsIcon icon={CheckmarkBadgeIcon} strokeWidth={2} />
                 Account

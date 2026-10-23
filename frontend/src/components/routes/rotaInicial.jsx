@@ -1,38 +1,7 @@
-import { Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
 export function RotaInicial() {
-    const [carregando, setCarregando] = useState(true);
-    const [autenticado, setAutenticado] = useState(false);
-
-    useEffect(() => {
-        async function verificarSessao() {
-            try {
-                const resposta = await fetch(
-                    "http://localhost:3000/api/auth/check",
-                    {
-                        credentials: "include"
-                    }
-                );
-
-                setAutenticado(resposta.ok);
-            } catch (error) {
-                setAutenticado(false);
-            } finally {
-                setCarregando(false);
-            }
-        }
-
-        verificarSessao();
-    }, []);
-
-    if (carregando) {
-        return <p>Verificando sessão...</p>;
-    }
-
-    if (autenticado) {
-        return <Navigate to="/index" replace />;
-    }
-
-    return <Navigate to="/login" replace />;
+  const { carregando, usuario } = useAuth();
+  if (carregando) return <p role="status">Verificando sessão...</p>;
+  return <Navigate to={usuario ? '/index' : '/login'} replace />;
 }

@@ -1,3 +1,4 @@
+import { fetchAutenticado } from "@/lib/api";
 
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -92,7 +93,7 @@ export default function SensoresFormulario() {
 
   // Busca todos os trens para preencher o Select
   async function buscarTrens() {
-    const resposta = await fetch(
+    const resposta = await fetchAutenticado(
       "http://localhost:3000/api/stmt/trains"
     );
 
@@ -113,7 +114,7 @@ export default function SensoresFormulario() {
 
   // Busca os dados de um sensor para edição
   async function buscarSensorPorId(sensorId) {
-    const resposta = await fetch(
+    const resposta = await fetchAutenticado(
       `http://localhost:3000/api/stmt/sensors/${sensorId}`
     );
 
@@ -221,7 +222,7 @@ export default function SensoresFormulario() {
     setSalvando(true);
 
     try {
-      const resposta = await fetch(
+      const resposta = await fetchAutenticado(
         editando
           ? `http://localhost:3000/api/stmt/sensors/${id}`
           : "http://localhost:3000/api/stmt/sensors",

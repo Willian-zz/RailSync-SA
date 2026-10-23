@@ -1,11 +1,11 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/login";
 import Cadastro from "./pages/sign-up";
 import Index from "./pages/index";
 import { RotaPublica } from "./components/routes/rotaPublica";
-import { RotaProtegida } from "./components/routes/rotaProtegida";
+import { RotaProtegida, RotaCargo } from "./components/routes/rotaProtegida";
 import { RotaInicial } from "./components/routes/rotaInicial";
 
 import DashboardLayout from "./components/dashboards/dashboard-layout";
@@ -15,6 +15,20 @@ import TrensLeituras from "./components/dashboards/trens/trens-leituras";
 
 import SensoresGerenciamento from "./components/dashboards/sensores/sensores-gerenciamento";
 import SensoresFormulario from "./components/dashboards/sensores/sensores-formulario";
+
+import { useAuth } from './hooks/use-auth';
+import RotasGerenciamento from './components/dashboards/rotas/rotas-gerenciamento';
+import RotasFormulario from './components/dashboards/rotas/rotas-formulario';
+import LinhasGerenciamento from './components/dashboards/linhas/linhas-gerenciamento';
+import LinhasFormulario from './components/dashboards/linhas/linhas-formulario';
+import LinhasConsulta from './components/dashboards/linhas/linhas-consulta';
+import UsuariosGerenciamento from './components/dashboards/usuarios/usuarios-gerenciamento';
+import UsuariosFormulario from './components/dashboards/usuarios/usuarios-formulario';
+
+function Inicio() {
+    const { usuario } = useAuth();
+    return usuario.cargo === 'usuario' ? <Navigate to="/index/linhas" replace /> : <DashboardLayout />;
+}
 
 const TrensLeituraRelatorio = lazy(() => import("./components/dashboards/trens/trens-leitura-relatorio"));
 
@@ -33,7 +47,18 @@ function App() {
                 <Route element={<RotaProtegida/>}>
                     <Route path="/index" element={<Index />}>
                         {/* Página inicial */}
-                        <Route index element={<DashboardLayout />} />
+                        <Route index element={<Inicio />} />
+                        <Route path="linhas" element={<LinhasConsulta />} />
+                        <Route element={<RotaCargo cargos={['operario']} />}>
+                            {/* Rotas: página e formulário próprios */}
+                            <Route path="rotasGerenciamento" element={<RotasGerenciamento />} />
+                            <Route path="rotasGerenciamento/novo" element={<RotasFormulario />} />
+                            <Route path="rotasGerenciamento/editar/:id" element={<RotasFormulario />} />
+
+                            {/* Linhas: página e formulário próprios */}
+                            <Route path="linhasGerenciamento" element={<LinhasGerenciamento />} />
+                            <Route path="linhasGerenciamento/novo" element={<LinhasFormulario />} />
+                            <Route path="linhasGerenciamento/editar/:id" element={<LinhasFormulario />} />
 
                         {/* Páginas internas */}
                         <Route path="trensLeituras" element={<TrensLeituras />} />
@@ -51,6 +76,11 @@ function App() {
                         <Route path="sensoresGerenciamento/editar/:id" element={<SensoresFormulario />} />
                         
 
+                        </Route>
+                        <Route element={<RotaCargo cargos={['dev']} />}>
+                            <Route path="usuariosGerenciamento" element={<UsuariosGerenciamento />} />
+                            <Route path="usuariosGerenciamento/editar/:id" element={<UsuariosFormulario />} />
+                        </Route>
                         {/* <Route path="relatorios" element={<Relatorios />} />
 
                         <Route path="configuracoes" element={<Configuracoes />} /> */}

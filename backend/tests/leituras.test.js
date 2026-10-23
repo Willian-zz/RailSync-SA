@@ -5,15 +5,21 @@ import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { after, test } from "node:test";
 import express from "express";
+import cookieParser from "cookie-parser";
+import jwt from "jsonwebtoken";
 import { listarLeituras, validarLimites } from "../src/leituras.js";
 
 const diretorio = mkdtempSync(join(tmpdir(), "railsync-test-"));
 process.env.NODE_ENV = "test";
+process.env.JWT_SECRET = "railsync-test-leituras";
 process.env.DATABASE_PATH = join(diretorio, "trens.db");
 const { default: banco } = await import("../src/banco.js");
+const usuarioId = banco.prepare("INSERT INTO usuarios (fullname, email, senha_hash, cargo) VALUES ('Operário', 'leituras@test.local', 'teste', 'operario')").run().lastInsertRowid;
+const token = jwt.sign({ id: Number(usuarioId) }, process.env.JWT_SECRET);
 const { default: rotas } = await import("../routes/stmtRoutes.js");
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 app.use("/api/stmt", rotas);
 const servidor = app.listen(0, "127.0.0.1");
 await new Promise((resolve) => servidor.once("listening", resolve));
@@ -28,7 +34,7 @@ after(async () => {
 async function chamar(caminho, metodo = "GET", dados) {
   const resposta = await fetch(`${url}${caminho}`, {
     method: metodo,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Cookie: `token=${token}` },
     body: dados === undefined ? undefined : JSON.stringify(dados),
   });
   return { status: resposta.status, dados: await resposta.json() };

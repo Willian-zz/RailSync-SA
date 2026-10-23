@@ -1,3 +1,4 @@
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "cn"
 import { useNavigate } from "react-router-dom"
 import { useEffect } from "react"
@@ -19,6 +20,7 @@ export function LoginForm({
   ...props
 }) {
   const navigate = useNavigate();
+  const { atualizarSessao } = useAuth();
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -78,6 +80,7 @@ export function LoginForm({
 
       console.log(dados.message)
 
+      await atualizarSessao();
       navigate("/index", {replace: true}) //substitui a página anterior e não consegue voltar para login
     } catch(error) {
       console.error("Erro ao conectar com o servidor: ", error);

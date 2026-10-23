@@ -1,3 +1,4 @@
+import { fetchAutenticado } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -56,7 +57,7 @@ export default function SensoresGerenciamento() {
 
   async function buscarSensores() {
     try {
-      const resposta = await fetch("http://localhost:3000/api/stmt/sensors");
+      const resposta = await fetchAutenticado("http://localhost:3000/api/stmt/sensors");
 
       if (!resposta.ok) {
         throw new Error("Não foi possível carregar os sensores.");
@@ -73,7 +74,7 @@ export default function SensoresGerenciamento() {
 
   async function buscarTrens() {
     try {
-      const resposta = await fetch("http://localhost:3000/api/stmt/trains");
+      const resposta = await fetchAutenticado("http://localhost:3000/api/stmt/trains");
 
       if (!resposta.ok) {
         throw new Error("Não foi possível carregar os trens.");
@@ -103,7 +104,7 @@ export default function SensoresGerenciamento() {
     if (!confirmar) return;
 
     try {
-      const resposta = await fetch(
+      const resposta = await fetchAutenticado(
         `http://localhost:3000/api/stmt/sensors/${id}`,
         {
           method: "DELETE",
